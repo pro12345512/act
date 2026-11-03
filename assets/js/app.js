@@ -90,18 +90,26 @@ function setButtonLoading(btnId, loading) {
 // =====================================================================
 
 async function apiCall(action, body) {
-    const response = await fetch(`${API_URL}?action=${action}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-        signal: AbortSignal.timeout(15000) // 15s timeout
-    });
-
-    if (!response.ok) {
-        throw new Error(`خطأ في الاتصال بالسيرفر (${response.status})`);
+    let response;
+    try {
+        response = await fetch(`${API_URL}?action=${action}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+            signal: AbortSignal.timeout(15000) // 15s timeout
+        });
+    } catch (networkErr) {
+        throw new Error('تعذر الاتصال بالخادم. تحقق من اتصالك بالإنترنت.');
     }
 
-    return await response.json();
+    let data;
+    try {
+        data = await response.json();
+    } catch {
+        throw new Error(`خطأ غير متوقع في استجابة السيرفر (${response.status})`);
+    }
+
+    return data;
 }
 
 // =====================================================================
