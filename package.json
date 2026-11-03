@@ -1,0 +1,24 @@
+{
+  "name": "inteliscale-web",
+  "version": "2.0.0",
+  "description": "InteliScale Distributor Activation & License Generation Platform",
+  "main": "api/generator.js",
+  "scripts": {
+    "test": "node --test test/api.test.js && python3 test/scale_client.py",
+    "audit": "node test/security_audit.js",
+    "start": "node test/dev-server.js"
+  },
+  "keywords": [
+    "inteliscale",
+    "activation",
+    "license-generator",
+    "vercel",
+    "serverless"
+  ],
+  "author": "Intelli Soft Solutions",
+  "license": "UNLICENSED",
+  "private": true,
+  "engines": {
+    "node": ">=18.x"
+  }
+}

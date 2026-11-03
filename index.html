@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="description" content="Inteli Scale - نظام توليد أكواد التفعيل للموزعين المعتمدين">
+    <meta name="theme-color" content="#0d1117">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Intelli Scale">
+
+    <!-- Prevent caching of sensitive pages -->
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+
+    <title>Inteli Scale - منشئ الأكواد</title>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚖️</text></svg>">
+
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="assets/css/style.css">
+</head>
+
+<body>
+
+    <!-- Offline Banner -->
+    <div id="offline-banner" class="offline-banner">
+        ⚠️ لا يوجد اتصال بالإنترنت — بعض الميزات قد لا تعمل
+    </div>
+
+    <!-- App Wrapper -->
+    <div class="app-wrapper">
+
+        <!-- Header / Logo -->
+        <header class="app-header" role="banner">
+            <div class="app-logo">
+                <div class="logo-icon" aria-hidden="true">⚖️</div>
+                <span class="logo-text">Inteli Scale</span>
+            </div>
+            <p class="app-subtitle">نظام الموزعين المعتمدين</p>
+        </header>
+
+        <!-- Step Dots (visual indicator) -->
+        <div class="steps" role="progressbar" aria-label="مرحلة التطبيق">
+            <div class="step-dot active" aria-hidden="true"></div>
+            <div class="step-dot" aria-hidden="true"></div>
+            <div class="step-dot" aria-hidden="true"></div>
+        </div>
+
+        <!-- ============================================================
+             SCREEN 1: Loading / Checking
+             ============================================================ -->
+        <div id="screen-loading" class="screen active" role="status" aria-live="polite">
+            <div class="card">
+                <div class="loading-screen">
+                    <div class="spinner-ring" aria-hidden="true"></div>
+                    <h1 class="loading-title">جاري التحقق...</h1>
+                    <p class="loading-subtitle">يتم الاتصال بالسيرفر للتحقق من حالة الجهاز</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================
+             SCREEN 2: Activation (Device not registered)
+             ============================================================ -->
+        <div id="screen-activation" class="screen" role="main">
+            <div class="card">
+                <h1 class="screen-title">🔐 تنشيط <span>الموزع</span></h1>
+                <p class="screen-desc">
+                    هذا الجهاز غير مسجل بعد.<br>
+                    أرسل معرّف الجهاز أدناه إلى المسؤول لتفعيله.
+                </p>
+
+                <!-- Alert messages -->
+                <div id="alert-activation-error" class="alert alert-error" role="alert">
+                    <span class="alert-icon">❌</span>
+                    <span class="alert-msg"></span>
+                </div>
+                <div id="alert-activation-success" class="alert alert-success" role="alert">
+                    <span class="alert-icon">✅</span>
+                    <span class="alert-msg"></span>
+                </div>
+                <div id="alert-activation-warning" class="alert alert-warning" role="alert">
+                    <span class="alert-icon">⚠️</span>
+                    <span class="alert-msg"></span>
+                </div>
+
+                <!-- Device Token Box -->
+                <div class="token-box">
+                    <div style="flex:1; min-width:0;">
+                        <div class="token-label">معرّف هذا الجهاز (Device Token)</div>
+                        <div id="activation-token" class="token-value" dir="ltr" aria-label="Device Token">
+                            جاري التحميل...
+                        </div>
+                    </div>
+                    <button id="btn-copy-token" class="copy-btn" onclick="copyToken()" title="نسخ المعرّف"
+                        aria-label="نسخ معرّف الجهاز">
+                        📋 نسخ
+                    </button>
+                </div>
+
+                <!-- Contact info -->
+                <div class="alert alert-warning show" style="margin-bottom: 20px;">
+                    <span class="alert-icon">📞</span>
+                    <span class="alert-msg">
+                        للتفعيل، تواصل مع المسؤول:<br>
+                        <strong dir="ltr">+967 770 471 086</strong>
+                    </span>
+                </div>
+
+                <!-- Manual HID Entry (for existing distributors) -->
+                <div class="divider" data-label="أو أدخل HID يدوياً"></div>
+                <div class="input-group">
+                    <label class="input-label" for="manual-hid-input">
+                        🖥️ معرّف الجهاز من البرنامج الأصلي (HID)
+                    </label>
+                    <div style="display:flex; gap:10px;">
+                        <input id="manual-hid-input" class="input-field" type="text"
+                            placeholder="مثال: 94E8565A211C99D2" autocomplete="off" autocorrect="off"
+                            autocapitalize="characters" spellcheck="false" dir="ltr" style="flex:1;"
+                            aria-label="معرف الجهاز HID">
+                        <button class="copy-btn" onclick="applyManualHid()" style="white-space:nowrap;"
+                            aria-label="تطبيق الـ HID">
+                            ✔ تطبيق
+                        </button>
+                    </div>
+                    <p style="font-size:11px; color:var(--color-muted); margin-top:6px;">
+                        إذا كان جهازك مسجلاً مسبقاً في النظام القديم، أدخل HID هنا
+                    </p>
+                </div>
+
+                <!-- Verify Button -->
+                <button id="btn-verify" class="btn btn-success" onclick="verifyActivation()"
+                    aria-label="التحقق من نجاح التفعيل">
+                    <span class="btn-text">✔ التحقق من نجاح التفعيل</span>
+                    <span class="btn-spinner" aria-hidden="true"></span>
+                </button>
+
+                <div class="divider" data-label="أو"></div>
+
+                <p style="text-align:center; font-size:12px; color:var(--color-muted);">
+                    ملاحظة: يجب توفر اتصال بالإنترنت للتحقق من التفعيل
+                </p>
+            </div>
+        </div>
+
+        <!-- ============================================================
+             SCREEN 3: Code Generator (Activated Device)
+             ============================================================ -->
+        <div id="screen-generator" class="screen" role="main">
+            <div class="card">
+
+                <!-- Generator Header -->
+                <div class="gen-header">
+                    <h1 class="screen-title" style="margin:0; text-align:right;">
+                        ⚙️ منشئ الأكواد
+                    </h1>
+                    <div class="gen-user-badge" title="حالة الجهاز: مفعّل">
+                        <div class="status-dot" aria-hidden="true"></div>
+                        <span id="gen-device-name">موزع</span>
+                    </div>
+                </div>
+
+                <!-- Alert messages -->
+                <div id="alert-generator-error" class="alert alert-error" role="alert">
+                    <span class="alert-icon">❌</span>
+                    <span class="alert-msg"></span>
+                </div>
+                <div id="alert-generator-success" class="alert alert-success" role="alert">
+                    <span class="alert-icon">✅</span>
+                    <span class="alert-msg"></span>
+                </div>
+
+                <!-- Client HID Input -->
+                <div class="input-group">
+                    <label class="input-label" for="client-hid-input">
+                        كود جهاز العميل (Client HID)
+                    </label>
+                    <input id="client-hid-input" class="input-field" type="text"
+                        placeholder="الصق هنا كود جهاز العميل..." autocomplete="off" autocorrect="off"
+                        autocapitalize="characters" spellcheck="false" inputmode="text"
+                        onkeydown="handleInputKeydown(event)" aria-label="كود جهاز العميل" dir="ltr">
+                </div>
+
+                <!-- Generate Button -->
+                <button id="btn-generate" class="btn btn-primary" onclick="generateCode()"
+                    aria-label="توليد كود التفعيل">
+                    <span class="btn-text">✨ توليد كود التفعيل</span>
+                    <span class="btn-spinner" aria-hidden="true"></span>
+                </button>
+
+                <!-- Result Box -->
+                <div id="result-box" class="result-box">
+                    <div class="result-label">كود التفعيل المولّد</div>
+                    <div id="result-code" class="result-code placeholder" dir="ltr" aria-live="polite">
+                        ---- ---- ----
+                    </div>
+                </div>
+
+                <!-- Copy Code Button -->
+                <button id="btn-copy-code" class="btn btn-outline" onclick="copyCode()" aria-label="نسخ كود التفعيل">
+                    📋 نسخ كود التفعيل
+                </button>
+
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="app-footer" role="contentinfo">
+            <p>
+                © جميع الحقوق محفوظة &nbsp;|&nbsp;
+                <strong>Intelli Soft Solutions</strong><br>
+                <a href="tel:+967770471086" dir="ltr">+967 770 471 086</a>
+            </p>
+        </footer>
+
+    </div><!-- end .app-wrapper -->
+
+    <!-- Scripts -->
+    <script src="assets/js/device.js"></script>
+    <script src="assets/js/app.js"></script>
+
+</body>
+
+</html>

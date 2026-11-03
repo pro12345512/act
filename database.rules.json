@@ -1,0 +1,20 @@
+{
+  "rules": {
+    "distributors": {
+      ".read": "auth != null && auth.token.admin === true",
+      ".write": "auth != null && auth.token.admin === true",
+      ".indexOn": ["token", "status"]
+    },
+    "generation_logs": {
+      ".read": "auth != null && auth.token.admin === true",
+      ".write": "auth != null && auth.token.admin === true",
+      ".indexOn": ["timestamp", "client_hid"]
+    },
+    "rate_limits": {
+      ".read": "auth != null && auth.token.admin === true",
+      ".write": "auth != null && auth.token.admin === true"
+    },
+    ".read": false,
+    ".write": false
+  }
+}
