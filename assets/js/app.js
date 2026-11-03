@@ -23,6 +23,7 @@ const App = {
     deviceName: 'موزع',
     currentScreen: null,
     isOnline: navigator.onLine,
+    authMode: false,
 };
 
 // =====================================================================
@@ -44,8 +45,9 @@ function showScreen(name) {
 
 function updateStepDots(screenName) {
     const dots = document.querySelectorAll('.step-dot');
-    const screens = ['loading', 'activation', 'generator'];
-    const idx = screens.indexOf(screenName);
+    const screens = ['loading', 'login', 'generator'];
+    let idx = screens.indexOf(screenName);
+    if (screenName === 'activation') idx = 1;
     dots.forEach((dot, i) => {
         dot.classList.remove('active', 'done');
         if (i < idx)  dot.classList.add('done');
@@ -89,12 +91,19 @@ function setButtonLoading(btnId, loading) {
 // API Calls
 // =====================================================================
 
-async function apiCall(action, body) {
+async function apiCall(action, body, options = {}) {
     let response;
+    const headers = { 'Content-Type': 'application/json' };
+    if (!options.skipAuth && App.authMode) {
+        const session = SessionManager.get();
+        if (session?.idToken) {
+            headers['Authorization'] = `Bearer ${session.idToken}`;
+        }
+    }
     try {
         response = await fetch(`${API_URL}?action=${action}`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers,
             body: JSON.stringify(body),
             signal: AbortSignal.timeout(15000) // 15s timeout
         });
@@ -116,59 +125,100 @@ async function apiCall(action, body) {
 // Screen Logic
 // =====================================================================
 
+async function restoreEmailSession() {
+    if (!SessionManager.hasSession()) return false;
+    if (!navigator.onLine) return false;
+
+    try {
+        if (SessionManager.isExpiringSoon()) {
+            const session = SessionManager.get();
+            const refreshed = await apiCall('refresh-session', {
+                refresh_token: session.refreshToken
+            }, { skipAuth: true });
+            if (!refreshed.success) {
+                SessionManager.clear();
+                return false;
+            }
+            SessionManager.updateTokens(refreshed);
+        }
+
+        const current = SessionManager.get();
+        const data = await apiCall('check-session', { id_token: current.idToken }, { skipAuth: true });
+        if (!data.success) {
+            SessionManager.clear();
+            return false;
+        }
+
+        App.authMode = true;
+        App.deviceName = data.device_name || SessionManager.get()?.deviceName || 'موزع';
+        App.deviceToken = data.distributor_key || null;
+        return true;
+    } catch (err) {
+        console.error('Session restore failed:', err);
+        return false;
+    }
+}
+
 /**
  * SCREEN 1: Loading
- * Check if device is activated, then route accordingly.
- * Supports both UUID tokens (new) and HID strings (existing distributors).
+ * Restore email session if present, otherwise show login.
+ * Device HID activation remains available as a fallback.
  */
 async function performInitialCheck() {
     showScreen('loading');
 
-    // If user previously saved a custom HID, prefer it
-    const savedHid = DeviceManager.getCustomHid();
-    if (savedHid) {
-        App.deviceToken = savedHid;
-    } else {
-        App.deviceToken = DeviceManager.getOrCreateToken();
+    if (await restoreEmailSession()) {
+        setTimeout(() => {
+            setupGeneratorScreen();
+            showScreen('generator');
+        }, 500);
+        return;
     }
 
-    // Pre-fill activation screen
+    const savedHid = DeviceManager.getCustomHid();
+    App.deviceToken = savedHid || DeviceManager.getOrCreateToken();
+
     const tokenEl = $('activation-token');
     if (tokenEl) tokenEl.textContent = App.deviceToken;
     const hidInput = $('manual-hid-input');
     if (hidInput && savedHid) hidInput.value = savedHid;
 
-    // If cached activation exists (session), skip server check
     if (DeviceManager.isActivationCached()) {
-        setTimeout(() => showScreen('generator'), 600);
+        setTimeout(() => showScreen('generator'), 400);
         return;
     }
 
-    // Check internet
+    // Email login is the default path. Only auto-check a previously saved HID.
+    if (!savedHid) {
+        showScreen('login');
+        return;
+    }
+
     if (!navigator.onLine) {
-        showScreen('activation');
-        showAlert('activation', 'error', '⚠️ لا يوجد اتصال بالإنترنت. تحقق من اتصالك وأعد المحاولة.');
+        showScreen('login');
+        showAlert('login', 'error', '⚠️ لا يوجد اتصال بالإنترنت. تحقق من اتصالك وأعد المحاولة.');
         return;
     }
 
     try {
-        const data = await apiCall('check-device', { device_token: App.deviceToken });
+        const data = await apiCall('check-device', { device_token: App.deviceToken }, { skipAuth: true });
 
         if (data.success) {
+            App.authMode = false;
             App.deviceName = data.device_name || 'موزع';
             DeviceManager.setActivationCache(true);
             setTimeout(() => {
                 setupGeneratorScreen();
                 showScreen('generator');
-            }, 800);
+            }, 600);
         } else {
-            showScreen('activation');
+            showScreen('login');
         }
 
     } catch (err) {
         console.error('Check device error:', err);
-        showScreen('activation');
-        showAlert('activation', 'error', 'تعذر الاتصال بالسيرفر. تأكد من اتصالك بالإنترنت.');
+        showScreen('login');
+        showAlert('login', 'error', 'تعذر الاتصال بالسيرفر. تأكد من اتصالك بالإنترنت.');
     }
 }
 
@@ -210,9 +260,10 @@ async function verifyActivation() {
     setButtonLoading('btn-verify', true);
 
     try {
-        const data = await apiCall('check-device', { device_token: App.deviceToken });
+        const data = await apiCall('check-device', { device_token: App.deviceToken }, { skipAuth: true });
 
         if (data.success) {
+            App.authMode = false;
             App.deviceName = data.device_name || 'موزع';
             DeviceManager.setActivationCache(true);
             showAlert('activation', 'success', '🎉 تم التفعيل بنجاح! جاري الانتقال...');
@@ -282,10 +333,29 @@ async function generateCode() {
     }
 
     try {
-        const data = await apiCall('generate-code', {
-            device_token: App.deviceToken,
-            client_hid: clientHid
-        });
+        if (App.authMode && SessionManager.isExpiringSoon()) {
+            const session = SessionManager.get();
+            if (session?.refreshToken) {
+                const refreshed = await apiCall('refresh-session', {
+                    refresh_token: session.refreshToken
+                }, { skipAuth: true });
+                if (refreshed.success) {
+                    SessionManager.updateTokens(refreshed);
+                } else {
+                    SessionManager.clear();
+                    showAlert('generator', 'error', 'انتهت الجلسة. سجّل الدخول مرة أخرى.');
+                    setTimeout(() => showScreen('login'), 1200);
+                    return;
+                }
+            }
+        }
+
+        const payload = { client_hid: clientHid };
+        if (!App.authMode && App.deviceToken) {
+            payload.device_token = App.deviceToken;
+        }
+
+        const data = await apiCall('generate-code', payload);
 
         if (data.success) {
             if (resultCode) {
@@ -302,8 +372,12 @@ async function generateCode() {
                 resultCode.classList.add('placeholder');
             }
             // If distributor revoked, clear cache and force re-check
-            if (data.message && data.message.includes('انتهت صلاحية')) {
+            if (data.message && (data.message.includes('انتهت صلاحية') || data.message.includes('الجلسة'))) {
                 DeviceManager.clearActivationCache();
+                if (App.authMode) {
+                    SessionManager.clear();
+                    setTimeout(() => showScreen('login'), 1400);
+                }
             }
             showAlert('generator', 'error', data.message || 'فشل توليد الكود.');
         }
@@ -380,6 +454,74 @@ function handleInputKeydown(event) {
     if (event.key === 'Enter') {
         generateCode();
     }
+}
+
+function togglePasswordVisibility() {
+    const input = $('login-password');
+    if (!input) return;
+    input.type = input.type === 'password' ? 'text' : 'password';
+}
+
+function showDeviceActivation() {
+    hideAlerts('activation');
+    showScreen('activation');
+}
+
+function backToLogin() {
+    hideAlerts('login');
+    showScreen('login');
+}
+
+async function submitLogin(event) {
+    if (event) event.preventDefault();
+    hideAlerts('login');
+
+    const email = ($('login-email')?.value || '').trim();
+    const password = $('login-password')?.value || '';
+
+    if (!email || !password) {
+        showAlert('login', 'error', 'أدخل البريد الإلكتروني وكلمة المرور.');
+        return;
+    }
+
+    if (!navigator.onLine) {
+        showAlert('login', 'error', 'لا يوجد اتصال بالإنترنت.');
+        return;
+    }
+
+    setButtonLoading('btn-login', true);
+
+    try {
+        const data = await apiCall('login', { email, password }, { skipAuth: true });
+        if (data.success) {
+            SessionManager.save(data);
+            App.authMode = true;
+            App.deviceName = data.device_name || 'موزع';
+            App.deviceToken = data.distributor_key || null;
+            DeviceManager.clearActivationCache();
+            showAlert('login', 'success', 'تم تسجيل الدخول بنجاح.');
+            if ($('login-password')) $('login-password').value = '';
+            setTimeout(() => {
+                setupGeneratorScreen();
+                showScreen('generator');
+            }, 700);
+        } else {
+            showAlert('login', 'error', data.message || 'فشل تسجيل الدخول.');
+        }
+    } catch (err) {
+        showAlert('login', 'error', err.message || 'تعذر الاتصال بالسيرفر.');
+    } finally {
+        setButtonLoading('btn-login', false);
+    }
+}
+
+function logout() {
+    SessionManager.clear();
+    DeviceManager.clearActivationCache();
+    App.authMode = false;
+    App.deviceName = 'موزع';
+    hideAlerts('login');
+    showScreen('login');
 }
 
 // =====================================================================

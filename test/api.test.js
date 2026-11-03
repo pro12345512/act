@@ -29,6 +29,8 @@ const {
     timingSafeEqualStr,
     sanitizeToken,
     sanitizeHid,
+    sanitizeEmail,
+    emailToKey,
     sanitizeName,
     getClientIp,
     setSecurityHeaders,
@@ -199,6 +201,28 @@ test('Security: sanitizeToken strictly filters malicious input and traversal att
     assert.equal(sanitizeToken('<script>'), null);
     assert.equal(sanitizeToken('ab'), null); // too short (< 8 chars)
     assert.equal(sanitizeToken('a'.repeat(150)), null); // too long (> 128 chars)
+});
+
+test('Security: sanitizeEmail and emailToKey accept valid emails only', () => {
+    assert.equal(sanitizeEmail(' Dist@Example.COM '), 'dist@example.com');
+    assert.equal(emailToKey('dist@example.com'), 'dist@example,com');
+    assert.equal(sanitizeEmail('not-an-email'), null);
+    assert.equal(sanitizeEmail('<script>@x.com'), null);
+    assert.equal(emailToKey('bad'), null);
+});
+
+test('API: login rejects missing email or password without contacting Firebase', async () => {
+    const { req, res } = createMockReqRes({
+        method: 'POST',
+        query: { action: 'login' },
+        body: { email: 'not-valid', password: '1' }
+    });
+    await generatorHandler(req, res);
+
+    assert.equal(res.statusCode, 200);
+    const body = res._getJSON();
+    assert.equal(body.success, false);
+    assert.match(body.message, /أدخل/);
 });
 
 test('Security: sanitizeHid validates hardware ID format', () => {

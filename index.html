@@ -48,7 +48,6 @@
         <div class="steps" role="progressbar" aria-label="مرحلة التطبيق">
             <div class="step-dot active" aria-hidden="true"></div>
             <div class="step-dot" aria-hidden="true"></div>
-            <div class="step-dot" aria-hidden="true"></div>
         </div>
 
         <!-- ============================================================
@@ -59,13 +58,70 @@
                 <div class="loading-screen">
                     <div class="spinner-ring" aria-hidden="true"></div>
                     <h1 class="loading-title">جاري التحقق...</h1>
-                    <p class="loading-subtitle">يتم الاتصال بالسيرفر للتحقق من حالة الجهاز</p>
+                    <p class="loading-subtitle">يتم التحقق من جلسة الدخول</p>
                 </div>
             </div>
         </div>
 
         <!-- ============================================================
-             SCREEN 2: Activation (Device not registered)
+             SCREEN 2: Email / Password Login
+             ============================================================ -->
+        <div id="screen-login" class="screen" role="main">
+            <div class="card">
+                <h1 class="screen-title">🔐 تسجيل <span>الدخول</span></h1>
+                <p class="screen-desc">
+                    أدخل البريد الإلكتروني وكلمة المرور<br>
+                    التي زودك بها المسؤول.
+                </p>
+
+                <div id="alert-login-error" class="alert alert-error" role="alert">
+                    <span class="alert-icon">❌</span>
+                    <span class="alert-msg"></span>
+                </div>
+                <div id="alert-login-success" class="alert alert-success" role="alert">
+                    <span class="alert-icon">✅</span>
+                    <span class="alert-msg"></span>
+                </div>
+
+                <form id="login-form" onsubmit="submitLogin(event)" novalidate>
+                    <div class="input-group">
+                        <label class="input-label" for="login-email">البريد الإلكتروني</label>
+                        <input id="login-email" class="input-field input-field-auth" type="email"
+                            placeholder="distributor@example.com" autocomplete="username"
+                            autocapitalize="none" spellcheck="false" dir="ltr"
+                            aria-label="البريد الإلكتروني" required>
+                    </div>
+
+                    <div class="input-group">
+                        <label class="input-label" for="login-password">كلمة المرور</label>
+                        <div class="password-wrap">
+                            <input id="login-password" class="input-field input-field-auth" type="password"
+                                placeholder="••••••••" autocomplete="current-password"
+                                dir="ltr" aria-label="كلمة المرور" required minlength="6">
+                            <button type="button" class="password-toggle" onclick="togglePasswordVisibility()"
+                                aria-label="إظهار كلمة المرور" title="إظهار / إخفاء">
+                                👁️
+                            </button>
+                        </div>
+                    </div>
+
+                    <button id="btn-login" class="btn btn-primary" type="submit" aria-label="تسجيل الدخول">
+                        <span class="btn-text">➡ دخول</span>
+                        <span class="btn-spinner" aria-hidden="true"></span>
+                    </button>
+                </form>
+
+                <div class="divider" data-label="أو"></div>
+
+                <button class="btn btn-outline" type="button" onclick="showDeviceActivation()"
+                    aria-label="تفعيل بمعرّف الجهاز">
+                    تفعيل بمعرّف الجهاز (HID)
+                </button>
+            </div>
+        </div>
+
+        <!-- ============================================================
+             SCREEN 3: Activation (Device not registered)
              ============================================================ -->
         <div id="screen-activation" class="screen" role="main">
             <div class="card">
@@ -145,6 +201,11 @@
                 <p style="text-align:center; font-size:12px; color:var(--color-muted);">
                     ملاحظة: يجب توفر اتصال بالإنترنت للتحقق من التفعيل
                 </p>
+
+                <button class="btn btn-outline" type="button" onclick="backToLogin()"
+                    aria-label="العودة لتسجيل الدخول">
+                    ⬅ العودة لتسجيل الدخول بالبريد
+                </button>
             </div>
         </div>
 
@@ -159,9 +220,14 @@
                     <h1 class="screen-title" style="margin:0; text-align:right;">
                         ⚙️ منشئ الأكواد
                     </h1>
-                    <div class="gen-user-badge" title="حالة الجهاز: مفعّل">
-                        <div class="status-dot" aria-hidden="true"></div>
-                        <span id="gen-device-name">موزع</span>
+                    <div class="gen-user-actions">
+                        <div class="gen-user-badge" title="حالة الحساب: مفعّل">
+                            <div class="status-dot" aria-hidden="true"></div>
+                            <span id="gen-device-name">موزع</span>
+                        </div>
+                        <button type="button" class="logout-btn" onclick="logout()" aria-label="تسجيل الخروج">
+                            خروج
+                        </button>
                     </div>
                 </div>
 
@@ -222,6 +288,7 @@
 
     <!-- Scripts -->
     <script src="assets/js/device.js"></script>
+    <script src="assets/js/auth.js"></script>
     <script src="assets/js/app.js"></script>
 
 </body>

@@ -10,6 +10,9 @@ const config = require('../lib/config');
 const { handleCors, sendError, sendJson } = require('../lib/security');
 const {
     parseBody,
+    handleLogin,
+    handleCheckSession,
+    handleRefreshSession,
     handleCheckDevice,
     handleGenerateCode,
     handleAddDevice
@@ -32,6 +35,15 @@ module.exports = async function handler(req, res) {
         const action = (req.query?.action || input?.action || '').trim();
 
         switch (action) {
+            case 'login':
+                return await handleLogin(req, res, input);
+
+            case 'check-session':
+                return await handleCheckSession(req, res, input);
+
+            case 'refresh-session':
+                return await handleRefreshSession(req, res, input);
+
             case 'check-device':
                 return await handleCheckDevice(req, res, input);
 

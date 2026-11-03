@@ -3,7 +3,7 @@
     "distributors": {
       ".read": "auth != null && auth.token.admin === true",
       ".write": "auth != null && auth.token.admin === true",
-      ".indexOn": ["token", "status"]
+      ".indexOn": ["token", "status", "email"]
     },
     "generation_logs": {
       ".read": "auth != null && auth.token.admin === true",

@@ -108,6 +108,15 @@ async function runSecurityAudit() {
             });
             record('Unauthorized code generation denied', unauthGen.json?.success === false);
 
+            // 7b. Email login rejects invalid credentials without leaking internals
+            const badLogin = await request('/api/generator?action=login', {
+                method: 'POST',
+                body: { email: 'not-an-email', password: 'x' }
+            });
+            record('Invalid email login rejected safely',
+                badLogin.json?.success === false && !String(badLogin.text).includes('FIREBASE_WEB_API_KEY')
+            );
+
             // 8. Admin Authentication Protection (add-device)
             const badAdmin = await request('/api/generator?action=add-device', {
                 method: 'POST',

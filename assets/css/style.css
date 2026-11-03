@@ -329,6 +329,60 @@ body::before {
     background: var(--bg-card-hover);
 }
 
+.input-field-auth {
+    font-family: var(--font-main);
+}
+
+.password-wrap {
+    position: relative;
+}
+
+.password-wrap .input-field {
+    padding-left: 48px;
+}
+
+.password-toggle {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    padding: 6px;
+    opacity: 0.7;
+}
+
+.password-toggle:hover {
+    opacity: 1;
+}
+
+.gen-user-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.logout-btn {
+    background: transparent;
+    border: 1px solid var(--color-border);
+    color: var(--color-muted);
+    border-radius: 99px;
+    padding: 6px 12px;
+    font-family: var(--font-main);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.logout-btn:hover {
+    border-color: var(--color-danger);
+    color: #fca5a5;
+}
+
 /* --- Buttons --- */
 .btn {
     width: 100%;
